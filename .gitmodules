@@ -1,0 +1,3 @@
+[submodule "gen02"]
+	path = gen02
+	url = https://github.com/254558/samsy-ninja.git

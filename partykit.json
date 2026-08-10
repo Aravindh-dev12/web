@@ -1,5 +1,0 @@
-{
-  "$schema": "https://www.partykit.io/schema.json",
-  "name": "arv-gen02-world",
-  "main": "party/server.js"
-}
