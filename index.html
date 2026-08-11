@@ -1,235 +1,141 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,minimum-scale=1,maximum-scale=1,user-scalable=no">
+<title></title>
+<style>
+html,body{width:100%;height:100%;margin:0;background:#000;overflow:hidden}
+#preloader,#app,#seelay-brand,#topmenu,#tutorial,#soundtoggle,#works-container,#works,#about,#about-background,#about-text-container,.notification-wrapper,.title-container,.overlay,.infos,.close-infos,.left-tutorial,.left-tutorial-container,.triangle-container,.square-container,.escape-container,.works-bottom-left-container,.works-bottom-container,.bar-container,.bar-wrapper,.credits,.links{display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important}
+body button,body a,body input,body select,body textarea,body [role="button"],body svg,body img{display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important}
+body h1,body h2,body h3,body h4,body h5,body h6,body p,body span,body label{color:transparent!important;text-shadow:none!important;font-size:0!important;line-height:0!important}
+canvas{display:block!important;visibility:visible!important;opacity:1!important}
+video,audio{position:fixed!important;width:1px!important;height:1px!important;left:-10000px!important;top:-10000px!important;opacity:0!important;pointer-events:none!important}
+</style>
+<script>
+(function(){
+  'use strict';
 
-    <head>
+  var TRANSPARENT_PNG='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNgYGBgAAAABQABpfZFQAAAAABJRU5ErkJggg==';
+  var BLACK_MP4='data:video/mp4;base64,AAAAIGZ0eXBpc29tAAACAGlzb21pc28yYXZjMW1wNDEAAAMWbW9vdgAAAGxtdmhkAAAAAAAAAAAAAAAAAAAD6AAAA+gAAQAAAQAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAkF0cmFrAAAAXHRraGQAAAADAAAAAAAAAAAAAAABAAAAAAAAA+gAAAAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAABAAAAAAAIAAAACAAAAAAAkZWR0cwAAABxlbHN0AAAAAAAAAAEAAAPoAAAAAAABAAAAAAG5bWRpYQAAACBtZGhkAAAAAAAAAAAAAAAAAABAAAAAQABVxAAAAAAALWhkbHIAAAAAAAAAAHZpZGUAAAAAAAAAAAAAAABWaWRlb0hhbmRsZXIAAAABZG1pbmYAAAAUdm1oZAAAAAEAAAAAAAAAAAAAACRkaW5mAAAAHGRyZWYAAAAAAAAAAQAAAAx1cmwgAAAAAQAAASRzdGJsAAAAwHN0c2QAAAAAAAAAAQAAALBhdmMxAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAAIAAgBIAAAASAAAAAAAAAABFUxhdmM2MS4xOS4xMDEgbGlieDI2NAAAAAAAAAAAAAAAGP//AAAANmF2Y0MBZAAK/+EAGWdkAAqs2V+IiMBEAAADAAQAAAMACDxIllgBAAZo6+PLIsD9+PgAAAAAEHBhc3AAAAABAAAAAQAAABRidHJ0AAAAAAAAFigAAAAAAAAAGHN0dHMAAAAAAAAAAQAAAAEAAEAAAAAAHHN0c2MAAAAAAAAAAQAAAAEAAAABAAAAAQAAABRzdHN6AAAAAAAAAsUAAAABAAAAFHN0Y28AAAAAAAAAAQAAA0YAAABhdWR0YQAAAFltZXRhAAAAAAAAACFoZGxyAAAAAAAAAABtZGlyYXBwbAAAAAAAAAAAAAAAACxpbHN0AAAAJKl0b28AAAAcZGF0YQAAAAEAAAAATGF2ZjYxLjcuMTAzAAAACGZyZWUAAALNbWRhdAAAAq0GBf//qdxF6b3m2Ui3lizYINkj7u94MjY0IC0gY29yZSAxNjQgcjMxMDggMzFlMTlmOSAtIEguMjY0L01QRUctNCBBVkMgY29kZWMgLSBDb3B5bGVmdCAyMDAzLTIwMjMgLSBodHRwOi8vd3d3LnZpZGVvbGFuLm9yZy94MjY0Lmh0bWwgLSBvcHRpb25zOiBjYWJhYz0xIHJlZj0zIGRlYmxvY2s9MTowOjAgYW5hbHlzZT0weDM6MHgxMTMgbWU9aGV4IHN1Ym1lPTcgcHN5PTEgcHN5X3JkPTEuMDA6MC4wMiBtaXhlZF9yZWY9MSBtZV9yYW5nZT0xNiBjaHJvbWFfbWU9MSB0cmVsbGlzPTEgOHg4ZGN0PTEgY3FtPTAgZGVhZHpvbmU9MjEsMTEgZmFzdF9wc2tpcD0xIGNocm9tYV9xcF9vZmZzZXQ9LTIgdGhyZWFkcz0xIGxvb2thaGVhZF90aHJlYWRzPTEgc2xpY2VkX3RocmVhZHM9MCBucj0wIGRlY2ltYXRlPTEgaW50ZXJsYWNlZD0wIGJsdXJheV9jb21wYXQ9MCBjb25zdHJhaW5lZF9pbnRyYT0wIGJmcmFtZXM9MyBiX3B5cmFtaWQ9MiBiX2FkYXB0PTEgYl9iaWFzPTAgZGlyZWN0PTEgd2VpZ2h0Yj0xIG9wZW5fZ29wPTAgd2VpZ2h0cD0yIGtleWludD0yNTAga2V5aW50X21pbj0xIHNjZW5lY3V0PTQwIGludHJhX3JlZnJlc2g9MCByY19sb29rYWhlYWQ9NDAgcmM9Y3JmIG1idHJlZT0xIGNyZj0yMy4wIHFjb21wPTAuNjAgcXBtaW49MCBxcG1heD02OSBxcHN0ZXA9NCBpcF9yYXRpbz0xLjQwIGFxPTE6MS4wMACAAAAAEGWIhAAV//73ye/Apuvb34E=';
+  var INVISIBLE_VRM='data:application/octet-stream;base64,Z2xURgIAAACABgAAbAYAAEpTT057ImFzc2V0Ijp7InZlcnNpb24iOiIyLjAiLCJnZW5lcmF0b3IiOiJTZWVsYXkgaW52aXNpYmxlIGF2YXRhciBwbGFjZWhvbGRlciJ9LCJzY2VuZSI6MCwic2NlbmVzIjpbeyJub2RlcyI6WzBdfV0sIm5vZGVzIjpbeyJuYW1lIjoiSW52aXNpYmxlUm9vdCIsImNoaWxkcmVuIjpbMV19LHsibmFtZSI6ImhpcHMiLCJ0cmFuc2xhdGlvbiI6WzAsMSwwXSwiY2hpbGRyZW4iOlsyLDQsN119LHsibmFtZSI6InNwaW5lIiwidHJhbnNsYXRpb24iOlswLDAuMiwwXSwiY2hpbGRyZW4iOlszLDEwLDEzXX0seyJuYW1lIjoiaGVhZCIsInRyYW5zbGF0aW9uIjpbMCwwLjUsMF19LHsibmFtZSI6ImxlZnRVcHBlckxlZyIsInRyYW5zbGF0aW9uIjpbMC4xLC0wLjEsMF0sImNoaWxkcmVuIjpbNV19LHsibmFtZSI6ImxlZnRMb3dlckxlZyIsInRyYW5zbGF0aW9uIjpbMCwtMC40LDBdLCJjaGlsZHJlbiI6WzZdfSx7Im5hbWUiOiJsZWZ0Rm9vdCIsInRyYW5zbGF0aW9uIjpbMCwtMC40LDAuMDVdfSx7Im5hbWUiOiJyaWdodFVwcGVyTGVnIiwidHJhbnNsYXRpb24iOlstMC4xLC0wLjEsMF0sImNoaWxkcmVuIjpbOF19LHsibmFtZSI6InJpZ2h0TG93ZXJMZWciLCJ0cmFuc2xhdGlvbiI6WzAsLTAuNCwwXSwiY2hpbGRyZW4iOls5XX0seyJuYW1lIjoicmlnaHRGb290IiwidHJhbnNsYXRpb24iOlswLC0wLjQsMC4wNV19LHsibmFtZSI6ImxlZnRVcHBlckFybSIsInRyYW5zbGF0aW9uIjpbMC4yLDAuMzUsMF0sImNoaWxkcmVuIjpbMTFdfSx7Im5hbWUiOiJsZWZ0TG93ZXJBcm0iLCJ0cmFuc2xhdGlvbiI6WzAuMywwLDBdLCJjaGlsZHJlbiI6WzEyXX0seyJuYW1lIjoibGVmdEhhbmQiLCJ0cmFuc2xhdGlvbiI6WzAuMjUsMCwwXX0seyJuYW1lIjoicmlnaHRVcHBlckFybSIsInRyYW5zbGF0aW9uIjpbLTAuMiwwLjM1LDBdLCJjaGlsZHJlbiI6WzE0XX0seyJuYW1lIjoicmlnaHRMb3dlckFybSIsInRyYW5zbGF0aW9uIjpbLTAuMywwLDBdLCJjaGlsZHJlbiI6WzE1XX0seyJuYW1lIjoicmlnaHRIYW5kIiwidHJhbnNsYXRpb24iOlstMC4yNSwwLDBdfV0sImV4dGVuc2lvbnNVc2VkIjpbIlZSTUNfdnJtIl0sImV4dGVuc2lvbnNSZXF1aXJlZCI6WyJWUk1DX3ZybSJdLCJleHRlbnNpb25zIjp7IlZSTUNfdnJtIjp7InNwZWNWZXJzaW9uIjoiMS4wIiwiaHVtYW5vaWQiOnsiaHVtYW5Cb25lcyI6eyJoaXBzIjp7Im5vZGUiOjF9LCJzcGluZSI6eyJub2RlIjoyfSwiaGVhZCI6eyJub2RlIjozfSwibGVmdFVwcGVyTGVnIjp7Im5vZGUiOjR9LCJsZWZ0TG93ZXJMZWciOnsibm9kZSI6NX0sImxlZnRGb290Ijp7Im5vZGUiOjZ9LCJyaWdodFVwcGVyTGVnIjp7Im5vZGUiOjd9LCJyaWdodExvd2VyTGVnIjp7Im5vZGUiOjh9LCJyaWdodEZvb3QiOnsibm9kZSI6OX0sImxlZnRVcHBlckFybSI6eyJub2RlIjoxMH0sImxlZnRMb3dlckFybSI6eyJub2RlIjoxMX0sImxlZnRIYW5kIjp7Im5vZGUiOjEyfSwicmlnaHRVcHBlckFybSI6eyJub2RlIjoxM30sInJpZ2h0TG93ZXJBcm0iOnsibm9kZSI6MTR9LCJyaWdodEhhbmQiOnsibm9kZSI6MTV9fX0sIm1ldGEiOnsibmFtZSI6IkludmlzaWJsZSBBdmF0YXIiLCJhdXRob3JzIjpbIlNlZWxheSJdLCJsaWNlbnNlVXJsIjoiaHR0cHM6Ly92cm0uZGV2L2xpY2Vuc2VzLzEuMC8ifX19fSA=';
 
-         <meta charset="UTF-8">
-         <title>Seelay</title>
+  function rawUrl(v){try{return new URL(typeof v==='string'?v:(v&&v.url)||'',location.href)}catch(e){return null}}
+  function kind(v){
+    var u=rawUrl(v); if(!u)return '';
+    var p=u.pathname.toLowerCase();
+    if(/\.vrm$/.test(p))return 'vrm';
+    if(/\/videos\/loading\.mp4$/.test(p))return 'blackvideo';
+    if(/\/(?:assets\/)?bmfont\/[^/]+\.png$/.test(p))return 'blank';
+    if(/\/(?:assets\/)?interaction\/[^/]+\.(?:png|svg)$/.test(p))return 'blank';
+    if(/\/preloader\/[^/]+\.png$/.test(p))return 'blank';
+    if(/\/front\/[^/]+\.svg$/.test(p))return 'blank';
+    if(/\/(?:assets\/)?textures\/(?:atlasemoji|faces8|up)\.png$/.test(p))return 'blank';
+    return '';
+  }
 
-         <meta name="viewport" content="width=device-width,minimum-scale=1.0,maximum-scale=1.0,user-scalable=no">
+  try{
+    var q=JSON.parse(localStorage.getItem('smsy_quests'))||{};
+    q.TUTORIAL=true;
+    localStorage.setItem('smsy_quests',JSON.stringify(q));
+  }catch(e){}
 
-         <meta name="description" content="Seelay interactive 3D portfolio experience.">
-         <meta name="author" content="Seelay">
-         <meta name="theme-color" content="#000000">
-         <meta name="msapplication-TileColor" content="#000000">
-         <meta name="apple-mobile-web-app-capable" content="yes">
-         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  (function(){
+    var p=new URLSearchParams(location.search),changed=false;
+    if(p.get('forceWebGL')!=='true'){p.set('forceWebGL','true');changed=true}
+    if(p.get('cdn')!=='false'){p.set('cdn','false');changed=true}
+    if(changed){location.replace(location.pathname+'?'+p.toString()+location.hash)}
+  })();
 
-         <link rel="icon" type="image/x-icon" href="./favicons/favicon.ico">
-         <link rel="icon" type="image/png" sizes="16x16" href="./favicons/favicon-16x16.png">
-         <link rel="icon" type="image/png" sizes="32x32" href="./favicons/favicon-32x32.png">
-         <link rel="apple-touch-icon" sizes="180x180" href="./favicons/apple-touch-icon.png">
-         <link rel="icon" type="image/png" sizes="192x192" href="./favicons/android-chrome-192x192.png">
-         <link rel="icon" type="image/png" sizes="512x512" href="./favicons/android-chrome-512x512.png">
+  function b64bytes(uri){
+    var b=atob(uri.slice(uri.indexOf(',')+1)),a=new Uint8Array(b.length);
+    for(var i=0;i<b.length;i++)a[i]=b.charCodeAt(i);
+    return a;
+  }
+  var blankBytes=b64bytes(TRANSPARENT_PNG),vrmBytes=b64bytes(INVISIBLE_VRM),mp4Bytes=b64bytes(BLACK_MP4);
 
-         <link rel="stylesheet" href="https://use.typekit.net/twe8lcf.css">
+  if(window.fetch){
+    var nativeFetch=window.fetch.bind(window);
+    window.fetch=function(input,init){
+      var k=kind(input);
+      if(k==='vrm')return Promise.resolve(new Response(vrmBytes,{status:200,headers:{'Content-Type':'model/gltf-binary','Content-Length':String(vrmBytes.length)}}));
+      if(k==='blank')return Promise.resolve(new Response(blankBytes,{status:200,headers:{'Content-Type':'image/png','Content-Length':String(blankBytes.length)}}));
+      if(k==='blackvideo')return Promise.resolve(new Response(mp4Bytes,{status:200,headers:{'Content-Type':'video/mp4','Content-Length':String(mp4Bytes.length)}}));
+      return nativeFetch(input,init);
+    };
+  }
 
-         <style>
-           /* Seelay cleanup layer: keep the 3D canvas, remove the old mascot/UI chrome. */
-           #preloader,
-           #topmenu,
-           #tutorial,
-           .notification-wrapper,
-           #smsy,
-           .tm {
-             display: none !important;
-             visibility: hidden !important;
-             opacity: 0 !important;
-             pointer-events: none !important;
-           }
+  if(window.XMLHttpRequest){
+    var nativeOpen=XMLHttpRequest.prototype.open;
+    XMLHttpRequest.prototype.open=function(method,url){
+      var k=kind(url);
+      if(k==='vrm')arguments[1]=INVISIBLE_VRM;
+      else if(k==='blank')arguments[1]=TRANSPARENT_PNG;
+      else if(k==='blackvideo')arguments[1]=BLACK_MP4;
+      return nativeOpen.apply(this,arguments);
+    };
+  }
 
-           #seelay-brand {
-             position: fixed;
-             top: 38px;
-             left: 50%;
-             transform: translateX(-50%);
-             z-index: 1000001;
-             color: #fff;
-             font-family: forma-djr-display, sans-serif;
-             font-size: 18px;
-             font-weight: 600;
-             letter-spacing: .08em;
-             line-height: 1;
-             text-transform: none;
-             pointer-events: none;
-             user-select: none;
-             white-space: nowrap;
-           }
+  function patchSrc(proto){
+    if(!proto)return;
+    var d=Object.getOwnPropertyDescriptor(proto,'src');
+    if(!d||!d.set)return;
+    Object.defineProperty(proto,'src',{configurable:true,enumerable:d.enumerable,get:d.get,set:function(v){
+      var k=kind(v);
+      if(k==='blank')v=TRANSPARENT_PNG;
+      else if(k==='blackvideo')v=BLACK_MP4;
+      d.set.call(this,v);
+    }});
+  }
+  patchSrc(window.HTMLImageElement&&HTMLImageElement.prototype);
+  patchSrc(window.HTMLMediaElement&&HTMLMediaElement.prototype);
 
-           .mobile #seelay-brand {
-             top: 20px;
-             font-size: 16px;
-           }
-         </style>
+  var nativeSetAttribute=Element.prototype.setAttribute;
+  Element.prototype.setAttribute=function(name,value){
+    if(String(name).toLowerCase()==='src'){
+      var k=kind(value);
+      if(k==='blank')value=TRANSPARENT_PNG;
+      else if(k==='blackvideo')value=BLACK_MP4;
+    }
+    return nativeSetAttribute.call(this,name,value);
+  };
 
-         <script>
-         /* Skip the captured tutorial and use the local media/backend path. */
-         try {
-           var q = JSON.parse(localStorage.getItem('smsy_quests')) || {};
-           q.TUTORIAL = true;
-           localStorage.setItem('smsy_quests', JSON.stringify(q));
-         } catch (e) {}
+  if(window.WebSocket){
+    var NativeWebSocket=window.WebSocket;
+    function SilentSocket(url){
+      var self=this;this.url=String(url||'');this.readyState=0;this.bufferedAmount=0;this.extensions='';this.protocol='';this.binaryType='blob';this._listeners={};
+      this.onopen=this.onmessage=this.onerror=this.onclose=null;
+      setTimeout(function(){if(self.readyState===0){self.readyState=1;self._emit('open',{type:'open',target:self,currentTarget:self})}},0);
+    }
+    SilentSocket.prototype.addEventListener=function(t,f){if(typeof f==='function')(this._listeners[t]||(this._listeners[t]=[])).push(f)};
+    SilentSocket.prototype.removeEventListener=function(t,f){var a=this._listeners[t]||[],i=a.indexOf(f);if(i>=0)a.splice(i,1)};
+    SilentSocket.prototype._emit=function(t,e){var h=this['on'+t];if(typeof h==='function')try{h.call(this,e)}catch(x){};(this._listeners[t]||[]).slice().forEach(function(f){try{f.call(this,e)}catch(x){}},this)};
+    SilentSocket.prototype.send=function(){};
+    SilentSocket.prototype.close=function(code,reason){if(this.readyState===3)return;this.readyState=3;this._emit('close',{type:'close',target:this,currentTarget:this,code:code||1000,reason:reason||'',wasClean:true})};
+    window.WebSocket=new Proxy(NativeWebSocket,{construct:function(T,args){var u=String(args[0]||'');return u.indexOf('samsy.partykit.dev')!==-1?new SilentSocket(u):Reflect.construct(T,args)},apply:function(T,x,args){return Reflect.apply(T,x,args)}});
+  }
 
-         (function () {
-           var p = new URLSearchParams(window.location.search);
-           var changed = false;
-           if (p.get('forceWebGL') !== 'true') {
-             p.set('forceWebGL', 'true');
-             changed = true;
-           }
-           if (p.get('cdn') !== 'false') {
-             p.set('cdn', 'false');
-             changed = true;
-           }
-           if (changed) {
-             window.location.replace(window.location.pathname + '?' + p.toString() + window.location.hash);
-           }
-         })();
-
-         /*
-          * The captured cat/VRM characters represent multiplayer peers.
-          * Keep WebSocket available for everything else, but provide a silent
-          * local socket for the Samsy PartyKit room so no remote avatars spawn.
-          */
-         (function () {
-           if (!window.WebSocket) return;
-
-           var NativeWebSocket = window.WebSocket;
-
-           function SilentSocket(url) {
-             var self = this;
-             this.url = String(url || '');
-             this.readyState = 0;
-             this.bufferedAmount = 0;
-             this.extensions = '';
-             this.protocol = '';
-             this.binaryType = 'blob';
-             this.onopen = null;
-             this.onmessage = null;
-             this.onerror = null;
-             this.onclose = null;
-             this._listeners = Object.create(null);
-
-             setTimeout(function () {
-               if (self.readyState !== 0) return;
-               self.readyState = 1;
-               var event = { type: 'open', target: self, currentTarget: self };
-               self._emit('open', event);
-             }, 0);
-           }
-
-           SilentSocket.prototype.addEventListener = function (type, fn) {
-             if (typeof fn !== 'function') return;
-             (this._listeners[type] || (this._listeners[type] = [])).push(fn);
-           };
-
-           SilentSocket.prototype.removeEventListener = function (type, fn) {
-             var list = this._listeners[type];
-             if (!list) return;
-             var i = list.indexOf(fn);
-             if (i >= 0) list.splice(i, 1);
-           };
-
-           SilentSocket.prototype._emit = function (type, event) {
-             var handler = this['on' + type];
-             if (typeof handler === 'function') {
-               try { handler.call(this, event); } catch (e) {}
-             }
-             var list = (this._listeners[type] || []).slice();
-             for (var i = 0; i < list.length; i++) {
-               try { list[i].call(this, event); } catch (e) {}
-             }
-           };
-
-           SilentSocket.prototype.send = function () {};
-
-           SilentSocket.prototype.close = function (code, reason) {
-             if (this.readyState === 3) return;
-             this.readyState = 3;
-             this._emit('close', {
-               type: 'close',
-               target: this,
-               currentTarget: this,
-               code: code || 1000,
-               reason: reason || '',
-               wasClean: true
-             });
-           };
-
-           window.WebSocket = new Proxy(NativeWebSocket, {
-             construct: function (Target, args) {
-               var url = String(args[0] || '');
-               if (url.indexOf('samsy.partykit.dev') !== -1) {
-                 return new SilentSocket(url);
-               }
-               return Reflect.construct(Target, args);
-             },
-             apply: function (Target, thisArg, args) {
-               return Reflect.apply(Target, thisArg, args);
-             }
-           });
-         })();
-
-         /* Remove CJK text and legacy SMSY text whenever Vue mounts/updates UI. */
-         (function () {
-           var cjk = /[\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF]/g;
-           var legacyBrand = /SMSY(?:-Gen02)?/gi;
-
-           function cleanTextNode(node) {
-             if (!node || node.nodeType !== 3 || !node.parentNode) return;
-             var tag = node.parentNode.nodeName;
-             if (tag === 'SCRIPT' || tag === 'STYLE') return;
-             var value = node.nodeValue || '';
-             var cleaned = value.replace(cjk, '').replace(legacyBrand, 'Seelay');
-             if (cleaned !== value) node.nodeValue = cleaned;
-           }
-
-           function cleanTree(root) {
-             if (!root) return;
-             if (root.nodeType === 3) {
-               cleanTextNode(root);
-               return;
-             }
-             if (root.nodeType !== 1 && root.nodeType !== 9 && root.nodeType !== 11) return;
-
-             var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-             var node;
-             while ((node = walker.nextNode())) cleanTextNode(node);
-           }
-
-           function startCleaner() {
-             cleanTree(document.body);
-             var observer = new MutationObserver(function (mutations) {
-               for (var i = 0; i < mutations.length; i++) {
-                 var m = mutations[i];
-                 if (m.type === 'characterData') cleanTextNode(m.target);
-                 for (var j = 0; j < m.addedNodes.length; j++) cleanTree(m.addedNodes[j]);
-               }
-             });
-             observer.observe(document.body, {
-               childList: true,
-               subtree: true,
-               characterData: true
-             });
-           }
-
-           if (document.readyState === 'loading') {
-             document.addEventListener('DOMContentLoaded', startCleaner, { once: true });
-           } else {
-             startCleaner();
-           }
-         })();
-         </script>
-
-         <script type="module" crossorigin src="./assets/js/main-ITpbzWAg.js"></script>
-         <link rel="stylesheet" crossorigin href="./assets/css/main-rb3R8F1q.css">
-   </head>
-
-    <body>
-
-       <div id="preloader"></div>
-       <div id="app"></div>
-       <div id="seelay-brand" aria-label="Seelay">Seelay</div>
-
-    </body>
+  function purgeHud(){
+    var app=document.getElementById('app');
+    if(app){
+      var canvases=app.querySelectorAll('canvas');
+      for(var i=0;i<canvases.length;i++)document.body.appendChild(canvases[i]);
+      app.style.setProperty('display','none','important');
+    }
+    var selectors=['#preloader','#topmenu','#tutorial','#soundtoggle','#works-container','#works','#about','.notification-wrapper','.title-container','.overlay','.infos','.close-infos','#seelay-brand'];
+    for(var s=0;s<selectors.length;s++)document.querySelectorAll(selectors[s]).forEach(function(el){el.style.setProperty('display','none','important')});
+  }
+  document.addEventListener('DOMContentLoaded',function(){
+    purgeHud();
+    new MutationObserver(purgeHud).observe(document.body,{childList:true,subtree:true});
+  },{once:true});
+})();
+</script>
+<script type="module" crossorigin src="./assets/js/main-ITpbzWAg.js"></script>
+<link rel="stylesheet" crossorigin href="./assets/css/main-rb3R8F1q.css">
+</head>
+<body>
+<div id="preloader"></div>
+<div id="app"></div>
+</body>
 </html>
