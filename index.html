@@ -53,11 +53,40 @@
          <link rel="icon" type="image/png" sizes="192x192" href="./favicons/android-chrome-192x192.png">
          <link rel="icon" type="image/png" sizes="512x512" href="./favicons/android-chrome-512x512.png">
 
-        <link rel="stylesheet" href="https://use.typekit.net/twe8lcf.css">
-         
+         <link rel="stylesheet" href="https://use.typekit.net/twe8lcf.css">
 
-     <script type="module" crossorigin src="./assets/js/main-ITpbzWAg.js"></script>
-     <link rel="stylesheet" crossorigin href="./assets/css/main-rb3R8F1q.css">
+         <!-- Keep the original loader hook for runtime initialization, but never render the red loader mascot. -->
+         <style>
+           #preloader { display: none !important; }
+         </style>
+
+         <!-- Local captured-build startup compatibility. This changes only resource/backend selection. -->
+         <script>
+         try {
+           var q = JSON.parse(localStorage.getItem('smsy_quests')) || {};
+           q.TUTORIAL = true;
+           localStorage.setItem('smsy_quests', JSON.stringify(q));
+         } catch (e) {}
+
+         (function () {
+           var p = new URLSearchParams(window.location.search);
+           var changed = false;
+           if (p.get('forceWebGL') !== 'true') {
+             p.set('forceWebGL', 'true');
+             changed = true;
+           }
+           if (p.get('cdn') !== 'false') {
+             p.set('cdn', 'false');
+             changed = true;
+           }
+           if (changed) {
+             window.location.replace(window.location.pathname + '?' + p.toString());
+           }
+         })();
+         </script>
+
+         <script type="module" crossorigin src="./assets/js/main-ITpbzWAg.js"></script>
+         <link rel="stylesheet" crossorigin href="./assets/css/main-rb3R8F1q.css">
    </head>
 
     <body>
@@ -71,9 +100,7 @@
       gtag('config', 'G-T6R7J0D4NK');
       </script>
 
- 
-
-       <div id="preloader">  </div>
+       <div id="preloader"></div>
 
        <div id="app"></div>
 
