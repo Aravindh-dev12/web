@@ -1,226 +1,53 @@
 (function(){'use strict';
-/*
-  Multi-video city wall replacement.
-  Sources are Pexels stock videos. The app is allowed to finish its own preload first;
-  only already-created project video elements are reassigned after startup.
-*/
-var activated=false;
-var trackedVideos=new Set();
-var sourceByVideo=new WeakMap();
-var stateByVideo=new WeakMap();
-var assignments=[];
-var assignmentCursor=0;
-var rotateTimer=null;
-
-var VIDEO_POOL=[
-  {
-    id:'36518063',
-    label:'neon-night-drive',
-    page:'https://www.pexels.com/video/driving-through-city-at-night-with-neon-lights-36518063/',
-    src:'https://videos.pexels.com/video-files/36518063/15484726_3840_2160_30fps.mp4'
-  },
-  {
-    id:'29834228',
-    label:'night-city-neon-street',
-    page:'https://www.pexels.com/video/night-city-street-scene-with-neon-lights-29834228/',
-    src:'https://videos.pexels.com/video-files/29834228/12812829_2160_3840_24fps.mp4'
-  },
-  {
-    id:'32119029',
-    label:'urban-nightlife',
-    page:'https://www.pexels.com/video/bustling-nightlife-scene-in-urban-city-street-32119029/',
-    src:'https://www.pexels.com/download/video/32119029/'
-  },
-  {
-    id:'32636958',
-    label:'neon-city-nightlife',
-    page:'https://www.pexels.com/video/vibrant-nightlife-in-a-neon-lit-city-32636958/',
-    src:'https://www.pexels.com/download/video/32636958/'
-  },
-  {
-    id:'10633329',
-    label:'aerial-city-grid',
-    page:'https://www.pexels.com/video/drone-footage-of-a-city-10633329/',
-    src:'https://www.pexels.com/download/video/10633329/'
-  },
-  {
-    id:'4687195',
-    label:'city-skyline-drone',
-    page:'https://www.pexels.com/video/drone-footage-of-a-city-4687195/',
-    src:'https://www.pexels.com/download/video/4687195/'
-  },
-  {
-    id:'19303831',
-    label:'urban-cityscape-drone',
-    page:'https://www.pexels.com/video/city-building-drone-shot-19303831/',
-    src:'https://www.pexels.com/download/video/19303831/'
-  },
-  {
-    id:'4046192',
-    label:'downtown-drone',
-    page:'https://www.pexels.com/video/drone-shot-of-the-city-4046192/',
-    src:'https://www.pexels.com/download/video/4046192/'
-  }
-];
-
-function shuffle(a){
-  a=a.slice();
-  for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1)),t=a[i];a[i]=a[j];a[j]=t}
-  return a
-}
-VIDEO_POOL=shuffle(VIDEO_POOL);
-window.__seelaryVideoPool=VIDEO_POOL.map(function(x){return{id:x.id,label:x.label,page:x.page}});
-window.__seelaryAssignments=assignments;
-
-function text(v){return v==null?'':String(v)}
-function mediaUrl(v){try{return text(v.currentSrc||v.src||v.getAttribute&&v.getAttribute('src')||'')}catch(e){return''}}
-function isLoadingUrl(s){return /\/videos\/loading\.(?:mp4|webm)(?:$|[?#])/i.test(text(s))}
-function isOriginalProjectUrl(s){return /\/videos\/[^/]+\.(?:mp4|webm|mov)(?:$|[?#])/i.test(text(s))&&!isLoadingUrl(s)}
-function originalFor(v){return sourceByVideo.get(v)||mediaUrl(v)}
-function isProjectVideo(v){return isOriginalProjectUrl(originalFor(v))}
-
-function trackVideo(v,assignedSource){
-  if(!v||v.tagName!=='VIDEO')return v;
-  trackedVideos.add(v);
-  if(assignedSource&&isOriginalProjectUrl(assignedSource)&&!sourceByVideo.has(v))sourceByVideo.set(v,text(assignedSource));
-  window.__seelaryTrackedVideos=trackedVideos.size;
-  return v
-}
-
-/* Track detached videos before Three.js turns them into VideoTextures. */
-var nativeCreateElement=Document.prototype.createElement;
-Document.prototype.createElement=function(name,options){
-  var el=nativeCreateElement.call(this,name,options);
-  if(String(name).toLowerCase()==='video')trackVideo(el);
-  return el
-};
-
-var mediaProto=window.HTMLMediaElement&&HTMLMediaElement.prototype;
-var mediaSrcDescriptor=mediaProto&&Object.getOwnPropertyDescriptor(mediaProto,'src');
-if(mediaSrcDescriptor&&mediaSrcDescriptor.set){
-  try{
-    Object.defineProperty(mediaProto,'src',{
-      configurable:true,
-      enumerable:mediaSrcDescriptor.enumerable,
-      get:mediaSrcDescriptor.get,
-      set:function(value){
-        mediaSrcDescriptor.set.call(this,value);
-        if(this.tagName==='VIDEO'){
-          trackVideo(this,value);
-          if(activated&&isOriginalProjectUrl(value)){var self=this;setTimeout(function(){assignVideo(self,false)},0)}
-        }
-      }
-    })
-  }catch(e){console.warn('[Seelary] video tracking hook unavailable',e)}
-}
-
-function nextPoolIndex(avoid){
-  if(!VIDEO_POOL.length)return-1;
-  var idx=assignmentCursor++%VIDEO_POOL.length;
-  if(VIDEO_POOL.length>1&&idx===avoid)idx=assignmentCursor++%VIDEO_POOL.length;
-  return idx
-}
-
-function record(v,item,status){
-  var st=stateByVideo.get(v)||{};
-  st.item=item||st.item;
-  st.status=status||st.status;
-  stateByVideo.set(v,st);
-  assignments.length=0;
-  trackedVideos.forEach(function(video){
-    var s=stateByVideo.get(video);
-    if(s&&s.item)assignments.push({original:originalFor(video),pexelsId:s.item.id,label:s.item.label,status:s.status||'unknown'})
-  });
-  window.__seelaryAssignments=assignments
-}
-
-function restoreOriginal(v,reason){
-  var original=sourceByVideo.get(v);
-  if(!original||!mediaSrcDescriptor||!mediaSrcDescriptor.set)return;
-  try{
-    v.pause();
-    v.crossOrigin='anonymous';
-    mediaSrcDescriptor.set.call(v,original);
-    v.muted=true;v.loop=true;v.playsInline=true;
-    v.load();
-    var p=v.play();if(p&&p.catch)p.catch(function(){});
-    var st=stateByVideo.get(v)||{};st.status='fallback-original:'+reason;stateByVideo.set(v,st);
-    record(v,st.item,st.status)
-  }catch(e){console.warn('[Seelary] original video restore failed',e)}
-}
-
-function tryPool(v,index,attempt){
-  if(!activated||!isProjectVideo(v)||!mediaSrcDescriptor||!mediaSrcDescriptor.set)return;
-  attempt=attempt||0;
-  if(attempt>=VIDEO_POOL.length){restoreOriginal(v,'pexels-unavailable');return}
-  index=(index+VIDEO_POOL.length)%VIDEO_POOL.length;
-  var item=VIDEO_POOL[index];
-  var st=stateByVideo.get(v)||{};
-  st.index=index;st.item=item;st.status='loading';st.attempt=attempt;
-  stateByVideo.set(v,st);record(v,item,'loading');
-
-  var settled=false;
-  function cleanup(){v.removeEventListener('canplay',onCanPlay);v.removeEventListener('error',onError)}
-  function onCanPlay(){
-    if(settled)return;settled=true;cleanup();
-    var current=stateByVideo.get(v)||{};current.status='playing';stateByVideo.set(v,current);record(v,item,'playing');
-    try{
-      if(isFinite(v.duration)&&v.duration>4)v.currentTime=Math.min(v.duration-1,Math.random()*Math.max(1,v.duration-2))
-    }catch(e){}
-    var p=v.play();if(p&&p.catch)p.catch(function(){})
-  }
-  function onError(){
-    if(settled)return;settled=true;cleanup();
-    console.warn('[Seelary] Pexels clip failed, trying another:',item.id,item.src);
-    tryPool(v,nextPoolIndex(index),attempt+1)
-  }
-  v.addEventListener('canplay',onCanPlay,{once:true});
-  v.addEventListener('error',onError,{once:true});
-
-  try{
-    v.pause();
-    v.srcObject=null;
-    v.crossOrigin='anonymous';
-    v.muted=true;v.loop=true;v.playsInline=true;v.preload='auto';
-    mediaSrcDescriptor.set.call(v,item.src);
-    v.load();
-    var timeout=setTimeout(function(){if(!settled){settled=true;cleanup();tryPool(v,nextPoolIndex(index),attempt+1)}},12000);
-    v.addEventListener('canplay',function(){clearTimeout(timeout)},{once:true});
-    v.addEventListener('error',function(){clearTimeout(timeout)},{once:true});
-  }catch(e){cleanup();tryPool(v,nextPoolIndex(index),attempt+1)}
-}
-
-function assignVideo(v,forceRotate){
-  if(!activated||!isProjectVideo(v))return;
-  var st=stateByVideo.get(v);
-  if(st&&!forceRotate&&(st.status==='loading'||st.status==='playing'))return;
-  var avoid=st&&Number.isInteger(st.index)?st.index:-1;
-  tryPool(v,nextPoolIndex(avoid),0)
-}
-
-function scan(){
-  document.querySelectorAll('video').forEach(function(v){trackVideo(v,mediaUrl(v))});
-  trackedVideos.forEach(function(v){assignVideo(v,false)});
-  window.__seelaryTrackedVideos=trackedVideos.size
-}
-
-function rotate(){
-  if(!activated)return;
-  trackedVideos.forEach(function(v){if(isProjectVideo(v))assignVideo(v,true)})
-}
-
-function activate(){
-  if(activated)return;
-  activated=true;
-  window.__seelaryPromoActive=true;
-  scan();
-  new MutationObserver(scan).observe(document.documentElement,{childList:true,subtree:true});
-  setInterval(scan,1200);
-  /* Change the city-wall mix periodically without synchronizing every screen to one clip. */
-  rotateTimer=setInterval(rotate,75000);
-  console.info('[Seelary] random Pexels video-wall mix active. Tracked:',trackedVideos.size,'Pool:',VIDEO_POOL.length)
-}
-
-/* Do not touch the app's preload path. */
-window.addEventListener('load',function(){setTimeout(activate,4500)},{once:true});
+var active=false,videos=new Set(),orig=new WeakMap(),vstate=new WeakMap(),assign=[],cursor=0,textCanvas=new Set(),panelCache=new WeakMap(),seed=0;
+var CONTENT=/(^|[^a-z])(sign|screen|display|billboard|poster|advert|logo|brand|label|text|font|kanji|japanese|chinese|korean|hologram|monitor|television|tv|led|lcd|neon|banner|lightbox|marquee|storefront|decal|graffiti|placard|promo|media)(\d+)?($|[^a-z])/i;
+var STRUCTURE=/(^|[^a-z])(building|road|ground|street|floor|roof|wall|facade|glass|window|concrete|asphalt|metal|pipe|vent|door|frame|rail|stairs|bridge|pole|cable|sidewalk|pavement|curb|column|beam|ceiling|fence)(\d+)?($|[^a-z])/i;
+var POOL=[
+{id:'36518063',src:'https://videos.pexels.com/video-files/36518063/15484726_3840_2160_30fps.mp4'},
+{id:'29834228',src:'https://videos.pexels.com/video-files/29834228/12812829_2160_3840_24fps.mp4'},
+{id:'32119029',src:'https://www.pexels.com/download/video/32119029/'},
+{id:'32636958',src:'https://www.pexels.com/download/video/32636958/'},
+{id:'10633329',src:'https://www.pexels.com/download/video/10633329/'},
+{id:'4687195',src:'https://www.pexels.com/download/video/4687195/'},
+{id:'19303831',src:'https://www.pexels.com/download/video/19303831/'},
+{id:'4046192',src:'https://www.pexels.com/download/video/4046192/'}];
+for(var si=POOL.length-1;si>0;si--){var sj=Math.floor(Math.random()*(si+1)),st=POOL[si];POOL[si]=POOL[sj];POOL[sj]=st}
+window.__seelaryVideoPool=POOL.map(function(x){return x.id});window.__seelaryAssignments=assign;window.__seelaryBuildingContent={staticMaterials:[],cityTransport:[],textCanvases:0,videoAssignments:assign};
+function s(v){return v==null?'':String(v)}
+function url(v){try{return new URL(typeof v==='string'?v:(v&&v.url)||'',location.href)}catch(e){return null}}
+function city(v){var u=url(v);return!!(u&&/\/models\/cyberfix\.glb$/i.test(u.pathname))}
+function murl(v){try{return s(v.currentSrc||v.src||v.getAttribute&&v.getAttribute('src')||'')}catch(e){return''}}
+function project(u){return /\/videos\/[^/]+\.(mp4|webm|mov)(\?|#|$)/i.test(s(u))&&!/\/videos\/loading\.(mp4|webm)(\?|#|$)/i.test(s(u))}
+function original(v){return orig.get(v)||murl(v)}
+function canvas(w,h,n){w=Math.max(16,Math.min(1024,w||256));h=Math.max(16,Math.min(1024,h||128));var c=document.createElement('canvas');c.width=w;c.height=h;var g=c.getContext('2d');if(!g)return c;var p=[['#05070d','#23d5ff','#8b5cf6'],['#07050a','#ff3d81','#6ee7ff'],['#03080a','#42f5b3','#30a7ff'],['#08050b','#ff7a18','#ff3dcb']][n%4];g.fillStyle=p[0];g.fillRect(0,0,w,h);for(var i=0;i<12;i++){g.globalAlpha=.45+.5*((i%3)/2);g.fillStyle=p[1+i%2];var x=(n*53+i*71)%w,y=(n*31+i*43)%h,rw=Math.max(5,(w/4+i*11)%Math.max(6,w*.5)),rh=Math.max(3,(h/8+i*7)%Math.max(4,h*.25));g.fillRect(x-rw/2,y-rh/2,rw,rh)}g.globalAlpha=.35;g.strokeStyle='#fff';for(var k=-h;k<w+h;k+=Math.max(8,h/8)){g.beginPath();g.moveTo(k,0);g.lineTo(k-h,h);g.stroke()}g.globalAlpha=1;return c}
+function bytes(uri){var b=atob(uri.slice(uri.indexOf(',')+1)),a=new Uint8Array(b.length);for(var i=0;i<b.length;i++)a[i]=b.charCodeAt(i);return a}
+var PANELS=[];try{for(var pi=0;pi<4;pi++)PANELS.push(bytes(canvas(128,64,pi+9).toDataURL('image/png')))}catch(e){}
+function mark(ctx){if(ctx&&ctx.canvas){textCanvas.add(ctx.canvas);window.__seelaryBuildingContent.textCanvases=textCanvas.size}}
+function patchText(p){if(!p)return;['fillText','strokeText'].forEach(function(n){var f=p[n];if(typeof f!=='function')return;p[n]=function(){mark(this);return f.apply(this,arguments)}})}
+patchText(window.CanvasRenderingContext2D&&CanvasRenderingContext2D.prototype);patchText(window.OffscreenCanvasRenderingContext2D&&OffscreenCanvasRenderingContext2D.prototype);
+function isCanvas(x){return!!(x&&((window.HTMLCanvasElement&&x instanceof HTMLCanvasElement)||(window.OffscreenCanvas&&x instanceof OffscreenCanvas)))}
+function replacement(c){var p=panelCache.get(c);if(!p){p=canvas(c.width,c.height,seed++);panelCache.set(c,p)}return p}
+function patchGL(p,n){if(!p||typeof p[n]!=='function')return;var f=p[n];p[n]=function(){var a=[].slice.call(arguments);for(var i=a.length-1;i>=0;i--)if(isCanvas(a[i])&&textCanvas.has(a[i])){a[i]=replacement(a[i]);break}return f.apply(this,a)}}
+['texImage2D','texSubImage2D'].forEach(function(n){patchGL(window.WebGLRenderingContext&&WebGLRenderingContext.prototype,n);patchGL(window.WebGL2RenderingContext&&WebGL2RenderingContext.prototype,n)});
+function a4(n){return(n+3)&~3}
+function parse(b){var u=new Uint8Array(b),d=new DataView(b);if(u.length<20||d.getUint32(0,true)!==0x46546c67||d.getUint32(4,true)!==2)return null;var off=12,ch=[],ji=-1,bi=-1;while(off+8<=u.length){var l=d.getUint32(off,true),t=d.getUint32(off+4,true),e=off+8+l;if(e>u.length)return null;ch.push({t:t,d:u.slice(off+8,e)});if(t===0x4e4f534a&&ji<0)ji=ch.length-1;if(t===0x004e4942&&bi<0)bi=ch.length-1;off=e}if(ji<0)return null;var j=JSON.parse(new TextDecoder().decode(ch[ji].d).replace(/[\0 ]+$/g,''));return{j:j,ch:ch,ji:ji,bi:bi,bin:bi>=0?ch[bi].d:new Uint8Array(0)}}
+function build(p,bin){var jb=new TextEncoder().encode(JSON.stringify(p.j)),jp=a4(jb.length),jd=new Uint8Array(jp);jd.fill(32);jd.set(jb);p.ch[p.ji]={t:0x4e4f534a,d:jd};var bp=a4(bin.length),bd=new Uint8Array(bp);bd.set(bin);if(p.bi>=0)p.ch[p.bi]={t:0x004e4942,d:bd};else p.ch.splice(p.ji+1,0,{t:0x004e4942,d:bd});var total=12;p.ch.forEach(function(c){total+=8+c.d.length});var o=new Uint8Array(total),dv=new DataView(o.buffer),x=12;dv.setUint32(0,0x46546c67,true);dv.setUint32(4,2,true);dv.setUint32(8,total,true);p.ch.forEach(function(c){dv.setUint32(x,c.d.length,true);dv.setUint32(x+4,c.t,true);o.set(c.d,x+8);x+=8+c.d.length});return o.buffer}
+function valid(b){try{var p=parse(b),vs=p&&p.j.bufferViews||[],n=p&&p.bin.length||0;if(!p)return false;for(var i=0;i<vs.length;i++){var v=vs[i]||{},o=v.byteOffset||0,l=v.byteLength||0;if((v.buffer||0)===0&&o+l>n)return false}return true}catch(e){return false}}
+function shape(j,p){try{var a=j.accessors[p.attributes.POSITION],e=[Math.abs(a.max[0]-a.min[0]),Math.abs(a.max[1]-a.min[1]),Math.abs(a.max[2]-a.min[2])].sort(function(x,y){return x-y});return e[2]>0&&e[0]<=e[2]*.025&&e[1]>=e[2]*.06}catch(e){return false}}
+function append(p){var j=p.j,base=j.buffers&&j.buffers[0]?Math.min(p.bin.length,j.buffers[0].byteLength):p.bin.length,outParts=[{o:0,b:p.bin.subarray(0,base)}],cur=base,tex=[];j.bufferViews=j.bufferViews||[];j.images=j.images||[];j.textures=j.textures||[];PANELS.forEach(function(b,i){var o=a4(cur);cur=o+b.length;outParts.push({o:o,b:b});var vi=j.bufferViews.length;j.bufferViews.push({buffer:0,byteOffset:o,byteLength:b.length});var ii=j.images.length;j.images.push({bufferView:vi,mimeType:'image/png',name:'SeelaryPanel'+i});var ti=j.textures.length;j.textures.push({source:ii,name:'SeelaryPanel'+i});tex.push(ti)});if(!j.buffers||!j.buffers.length)j.buffers=[{byteLength:cur}];else j.buffers[0].byteLength=cur;var out=new Uint8Array(cur);outParts.forEach(function(x){out.set(x.b,x.o)});return{bin:out,tex:tex}}
+function replaceCity(b){try{if(!PANELS.length)return b;var p=parse(b);if(!p)return b;var j=p.j,mats=j.materials||[],meshes=j.meshes||[],nodes=j.nodes||[],nodeNames=[];nodes.forEach(function(n){if(n&&Number.isInteger(n.mesh))(nodeNames[n.mesh]||(nodeNames[n.mesh]=[])).push(s(n.name))});var uses=mats.map(function(){return[]});meshes.forEach(function(m,mi){var names=[s(m.name)].concat(nodeNames[mi]||[]);(m.primitives||[]).forEach(function(pr){if(pr&&Number.isInteger(pr.material)&&uses[pr.material])uses[pr.material].push({names:names,flat:shape(j,pr),uv:!!(pr.attributes&&Number.isInteger(pr.attributes.TEXCOORD_0))})})});var targets=[];mats.forEach(function(m,i){m=m||{};var u=uses[i]||[],names=[s(m.name)];u.forEach(function(x){names=names.concat(x.names)});var joined=names.join(' '),named=CONTENT.test(joined),struct=STRUCTURE.test(joined)&&!named,em=!!m.emissiveTexture||!!(m.emissiveFactor&&m.emissiveFactor.some(function(x){return x>.08})),allFlat=u.length&&u.every(function(x){return x.flat}),uv=u.some(function(x){return x.uv});if(named||(!struct&&allFlat&&em&&uv))targets.push({i:i,n:s(m.name),why:named?'name':'flat-emissive',uv:uv})});if(!targets.length)return b;var ad=append(p);targets.forEach(function(t,k){var m=mats[t.i],pb=m.pbrMetallicRoughness||(m.pbrMetallicRoughness={}),ti=ad.tex[k%ad.tex.length];if(pb.baseColorTexture)pb.baseColorTexture.index=ti;else if(t.uv)pb.baseColorTexture={index:ti};pb.baseColorFactor=[1,1,1,1];if(m.emissiveTexture)m.emissiveTexture.index=ti;else if(t.uv)m.emissiveTexture={index:ti};m.emissiveFactor=[.5,.5,.5]});var out=build(p,ad.bin);if(!valid(out))return b;window.__seelaryBuildingContent.staticMaterials=targets;return out}catch(e){console.warn('[Seelary] city content fallback',e);return b}}
+function transport(n){var a=window.__seelaryBuildingContent.cityTransport;if(a.indexOf(n)<0)a.push(n)}
+if(window.fetch){var pf=window.fetch.bind(window);window.fetch=function(i,o){if(!city(i))return pf(i,o);return pf(i,o).then(function(r){if(!r.ok)return r;return r.arrayBuffer().then(function(b){var h=new Headers(r.headers);h.delete('content-length');transport('fetch');return new Response(replaceCity(b),{status:r.status,statusText:r.statusText,headers:h})})})}}
+if(window.XMLHttpRequest){var xp=XMLHttpRequest.prototype,po=xp.open,rd=Object.getOwnPropertyDescriptor(xp,'response');xp.open=function(m,u){this.__seelaryCity=city(u);this.__seelaryRaw=this.__seelaryClean=null;return po.apply(this,arguments)};if(rd&&rd.get)try{Object.defineProperty(xp,'response',{configurable:true,get:function(){var r=rd.get.call(this);if(!this.__seelaryCity||!(r instanceof ArrayBuffer))return r;if(this.__seelaryRaw===r&&this.__seelaryClean)return this.__seelaryClean;this.__seelaryRaw=r;this.__seelaryClean=replaceCity(r);transport('xhr');return this.__seelaryClean}})}catch(e){}}
+function track(v,u){if(!v||v.tagName!=='VIDEO')return v;videos.add(v);if(u&&project(u)&&!orig.has(v))orig.set(v,s(u));window.__seelaryTrackedVideos=videos.size;return v}
+var ce=Document.prototype.createElement;Document.prototype.createElement=function(n,o){var e=ce.call(this,n,o);if(s(n).toLowerCase()==='video')track(e);return e};
+var mp=window.HTMLMediaElement&&HTMLMediaElement.prototype,sd=mp&&Object.getOwnPropertyDescriptor(mp,'src');if(sd&&sd.set)try{Object.defineProperty(mp,'src',{configurable:true,get:sd.get,set:function(v){sd.set.call(this,v);if(this.tagName==='VIDEO'){track(this,v);if(active&&project(v)){var q=this;setTimeout(function(){assignVideo(q,false)},0)}}}})}catch(e){}
+function next(avoid){var i=cursor++%POOL.length;if(POOL.length>1&&i===avoid)i=cursor++%POOL.length;return i}
+function report(){assign.length=0;videos.forEach(function(v){var z=vstate.get(v);if(z&&z.item)assign.push({original:original(v),pexelsId:z.item.id,status:z.status})});window.__seelaryAssignments=assign}
+function blank(v){try{v.pause();v.srcObject=null;sd.set.call(v,'');v.load()}catch(e){}var z=vstate.get(v)||{};z.status='blank';vstate.set(v,z);report()}
+function tryVideo(v,idx,attempt){if(!active||!project(original(v))||!sd||!sd.set)return;if(attempt>=POOL.length)return blank(v);idx=(idx+POOL.length)%POOL.length;var item=POOL[idx],z={idx:idx,item:item,status:'loading'},done=false,to;vstate.set(v,z);report();function clean(){v.removeEventListener('canplay',ok);v.removeEventListener('error',bad);clearTimeout(to)}function ok(){if(done)return;done=true;clean();z.status='playing';vstate.set(v,z);report();try{if(v.duration>4)v.currentTime=Math.random()*(v.duration-2)}catch(e){}var p=v.play();if(p&&p.catch)p.catch(function(){})}function bad(){if(done)return;done=true;clean();tryVideo(v,next(idx),attempt+1)}v.addEventListener('canplay',ok,{once:true});v.addEventListener('error',bad,{once:true});try{v.pause();v.srcObject=null;v.crossOrigin='anonymous';v.muted=true;v.loop=true;v.playsInline=true;v.preload='auto';sd.set.call(v,item.src);v.load();to=setTimeout(bad,12000)}catch(e){bad()}}
+function assignVideo(v,force){if(!active||!project(original(v)))return;var z=vstate.get(v);if(z&&!force&&(z.status==='playing'||z.status==='loading'||z.status==='blank'))return;tryVideo(v,next(z&&z.idx),0)}
+function scan(){document.querySelectorAll('video').forEach(function(v){track(v,murl(v))});videos.forEach(function(v){assignVideo(v,false)})}
+function start(){if(active)return;active=true;window.__seelaryPromoActive=true;scan();new MutationObserver(scan).observe(document.documentElement,{childList:true,subtree:true});setInterval(scan,1500);setInterval(function(){videos.forEach(function(v){assignVideo(v,true)})},75000);console.info('[Seelary] full building-content replacement active',window.__seelaryBuildingContent)}
+window.addEventListener('load',function(){setTimeout(start,4500)},{once:true});
 })();
