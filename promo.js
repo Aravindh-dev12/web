@@ -16,6 +16,6 @@ patch(window.CanvasRenderingContext2D&&CanvasRenderingContext2D.prototype,'fillT
 patch(window.CanvasRenderingContext2D&&CanvasRenderingContext2D.prototype,'strokeText');
 patch(window.OffscreenCanvasRenderingContext2D&&OffscreenCanvasRenderingContext2D.prototype,'fillText');
 patch(window.OffscreenCanvasRenderingContext2D&&OffscreenCanvasRenderingContext2D.prototype,'strokeText');
-window.__seelaryAdCopyLayer={active:true,version:'content-only-v3',replacements:Object.keys(COPY).length};
-document.write('<script src="./promo-social.js"></'+'script>');
+window.__seelaryAdCopyLayer={active:true,version:'all-building-content-only-v4',replacements:Object.keys(COPY).length};
+document.write('<script src="./city-content.js"></'+'script><script src="./promo-social.js"></'+'script>');
 })();
